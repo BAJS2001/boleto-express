@@ -1,32 +1,34 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import { useEthereum } from "../context/EthereumContext"
-import { Bell, Wallet, Menu, X, ChevronDown } from "lucide-react"
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useEthereum } from "../context/EthereumContext";
+import { Bell, Wallet, Menu, X, ChevronDown } from "lucide-react";
 
-export default function Header({ toggleSidebar, isConnected, setIsConnected }) {
-  const { account, balance, connect, disconnect } = useEthereum()
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const navigate = useNavigate()
+export default function Header({ toggleSidebar }) {
+  const { isConnected, account, balance, connect, disconnect } = useEthereum();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleConnect = async () => {
-    await connect()
-    setIsConnected(true)
-  }
+    try {
+      await connect();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   const handleDisconnect = () => {
-    disconnect()
-    setIsConnected(false)
-    setDropdownOpen(false)
-  }
+    disconnect();
+    setDropdownOpen(false);
+  };
 
   const notifications = [
     { id: 1, text: "Nueva ruta frecuente: Quito - Guayaquil" },
     { id: 2, text: "Oferta: 20% de descuento en rutas a Cuenca" },
-  ]
+  ];
 
   return (
     <header className="bg-white shadow-sm">
@@ -190,5 +192,5 @@ export default function Header({ toggleSidebar, isConnected, setIsConnected }) {
         </div>
       )}
     </header>
-  )
+  );
 }

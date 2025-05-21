@@ -1,50 +1,66 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useEthereum } from "../context/EthereumContext"
-import { Wallet, LogOut, Copy, ExternalLink } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useEthereum } from "../context/EthereumContext";
+import { Wallet, LogOut, Copy, ExternalLink } from "lucide-react";
 
 export default function Profile() {
-  const { account, balance, disconnect } = useEthereum()
-  const [tickets, setTickets] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
+  const { account, balance, disconnect, contract, fetchTicket } = useEthereum();
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
+  // Carga los NFT tickets on-chain
   useEffect(() => {
-    // Fetch user's NFT tickets
-    const fetchTickets = async () => {
-      setLoading(true)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Mock NFT tickets data
-      const mockTickets = Array.from({ length: 6 }, (_, i) => ({
-        id: Math.floor(Math.random() * 1000000).toString(),
-        from: i % 2 === 0 ? "Quito" : "Guayaquil",
-        to: i % 2 === 0 ? "Guayaquil" : "Cuenca",
-        date: new Date(Date.now() - i * 86400000 * 15).toISOString().split("T")[0],
-        company: ["TransExpress", "EcuaBus", "Flota Imbabura", "Turismo Ecuador"][i % 4],
-        image: `https://picsum.photos/seed/${i + 100}/200/200`,
-      }))
-
-      setTickets(mockTickets)
-      setLoading(false)
+    async function loadTickets() {
+      if (!contract || !account) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const balanceBN = await contract.balanceOf(account);
+        const count = balanceBN.toNumber();
+        const arr = [];
+        for (let i = 0; i < count; i++) {
+          const tokenIdBN = await contract.tokenOfOwnerByIndex(account, i);
+          const tokenId = tokenIdBN.toString();
+          const data = await fetchTicket(tokenId);
+          arr.push({
+            tokenId,
+            from: data.origin,
+            to: data.destination,
+            date: data.timestamp,
+          });
+        }
+        setTickets(arr);
+      } catch (err) {
+        console.error("Error cargando tickets:", err);
+      } finally {
+        setLoading(false);
+      }
     }
-
-    fetchTickets()
-  }, [])
+    loadTickets();
+  }, [contract, account, fetchTicket]);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(account)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    navigator.clipboard.writeText(account);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleDisconnect = () => {
-    disconnect()
-    window.location.href = "/"
-  }
+    disconnect();
+    window.location.href = "/";
+  };
+
+  const formatDate = (ts) => {
+    return new Date(ts * 1000).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -83,7 +99,11 @@ export default function Profile() {
                     className="ml-2 p-1 text-gray-500 hover:text-gray-700"
                     title="Copiar dirección"
                   >
-                    {copied ? <span className="text-green-500 text-xs">¡Copiado!</span> : <Copy className="h-4 w-4" />}
+                    {copied ? (
+                      <span className="text-green-500 text-xs">¡Copiado!</span>
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -110,51 +130,41 @@ export default function Profile() {
 
             {loading ? (
               <div className="flex justify-center items-center h-48">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D24848] mx-auto"></div>
-                  <p className="mt-4 text-gray-600">Cargando boletos...</p>
-                </div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D24848] mx-auto"></div>
+                <p className="mt-4 text-gray-600">Cargando boletos...</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {tickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="aspect-square bg-gray-100">
-                      <img
-                        src={ticket.image || "/placeholder.svg"}
-                        alt={`Boleto ${ticket.id}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <p className="text-xs text-gray-500">NFT ID: {ticket.id.substring(0, 8)}...</p>
-                      <p className="font-medium mt-1">
-                        {ticket.from} - {ticket.to}
-                      </p>
-                      <div className="flex justify-between items-center mt-2">
-                        <p className="text-sm text-gray-600">{ticket.date}</p>
-                        <p className="text-sm font-medium text-[#D24848]">{ticket.company}</p>
+                {tickets.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg col-span-full">
+                    <p className="text-gray-500">No tienes boletos NFT todavía</p>
+                    <a href="/" className="mt-2 inline-block text-[#D24848] hover:text-[#B83A3A]">
+                      Comprar mi primer boleto
+                    </a>
+                  </div>
+                ) : (
+                  tickets.map((ticket) => (
+                    <div
+                      key={ticket.tokenId}
+                      className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="p-4">
+                        <p className="text-xs text-gray-500">NFT ID: {ticket.tokenId}</p>
+                        <p className="font-medium mt-1">
+                          {ticket.from} → {ticket.to}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {formatDate(ticket.date)}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!loading && tickets.length === 0 && (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <p className="text-gray-500">No tienes boletos NFT todavía</p>
-                <a href="/" className="mt-2 inline-block text-[#D24848] hover:text-[#B83A3A]">
-                  Comprar mi primer boleto
-                </a>
+                  ))
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

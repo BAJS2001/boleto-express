@@ -1,63 +1,60 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useParams, useLocation, Link } from "react-router-dom"
-import { Check, Download, Share2, MapPin, Calendar, Ticket } from "lucide-react"
-import QRCode from "react-qr-code"
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Check, Download, Share2, MapPin, Calendar, Ticket } from "lucide-react";
+import QRCode from "react-qr-code";
+import { useEthereum } from "../context/EthereumContext";
 
 export default function Confirmation() {
-  const { tokenId } = useParams()
-  const location = useLocation()
-  const [ticketDetails, setTicketDetails] = useState({
-    from: "",
-    to: "",
-    date: "",
-    company: "",
-    status: "valid",
-  })
+  const { tokenId } = useParams();
+  const navigate = useNavigate();
+  const { fetchTicket, checkUsed } = useEthereum();
+  const [ticket, setTicket] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [used, setUsed] = useState(false);
 
   useEffect(() => {
-    // Parse query parameters
-    const params = new URLSearchParams(location.search)
-
-    setTicketDetails({
-      from: params.get("from") || "",
-      to: params.get("to") || "",
-      date: params.get("date") || "",
-      company: params.get("company") || "",
-      status: "valid",
-    })
-  }, [location.search])
+    // Cargar detalles on-chain del ticket
+    async function loadTicket() {
+      setLoading(true);
+      try {
+        const data = await fetchTicket(tokenId);
+        setTicket({
+          origin: data.origin,
+          destination: data.destination,
+          seat: data.seat,
+          timestamp: data.timestamp,
+          passenger: data.passenger,
+        });
+        const isUsed = await checkUsed(tokenId);
+        setUsed(isUsed);
+      } catch (err) {
+        console.error("Error cargando ticket:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTicket();
+  }, [tokenId, fetchTicket, checkUsed]);
 
   // Format date for display
-  const formatDate = (dateString) => {
-    if (!dateString) return ""
-
-    const date = new Date(dateString)
+  const formatDate = (ts) => {
+    const date = new Date(ts * 1000);
     return date.toLocaleDateString("es-ES", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
-    })
-  }
+    });
+  };
 
-  const handleAddToWallet = () => {
-    alert("Esta funcionalidad simularía la adición del NFT a una wallet digital.")
-  }
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator
-        .share({
-          title: "Mi boleto de BoletoExpress",
-          text: `Boleto de ${ticketDetails.from} a ${ticketDetails.to} con ${ticketDetails.company}`,
-          url: window.location.href,
-        })
-        .catch((error) => console.log("Error sharing", error))
-    } else {
-      alert("La funcionalidad de compartir no está disponible en este navegador.")
-    }
+  if (loading || !ticket) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D24848]"></div>
+      </div>
+    );
   }
 
   return (
@@ -65,12 +62,11 @@ export default function Confirmation() {
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="bg-green-50 px-6 py-4 border-b border-green-100">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <Check className="h-8 w-8 text-green-500" />
-            </div>
+            <Check className="h-8 w-8 text-green-500" />
             <div className="ml-3">
               <h1 className="text-lg font-medium text-green-800">¡Compra exitosa!</h1>
-              <p className="text-sm text-green-600">Tu boleto ha sido emitido como NFT</p>
+              <p className="text-sm text-green-600">
+                Tu boleto ha sido emitido como NFT</p>
             </div>
           </div>
         </div>
@@ -78,7 +74,7 @@ export default function Confirmation() {
         <div className="p-6">
           <div className="mb-6 flex justify-center">
             <div className="p-3 bg-white border border-gray-200 rounded-lg">
-              <QRCode value={`https://boletoexpress.ec/verify/${tokenId}`} size={180} level="H" />
+              <QRCode value={tokenId} size={180} level="H" />
             </div>
           </div>
 
@@ -94,23 +90,21 @@ export default function Confirmation() {
                 <MapPin className="h-5 w-5 text-[#D24848] mr-2 mt-0.5" />
                 <div>
                   <p className="text-sm text-gray-500">Ruta</p>
-                  <p className="font-medium">
-                    {ticketDetails.from} - {ticketDetails.to}
-                  </p>
+                  <p className="font-medium">{ticket.origin} - {ticket.destination}</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <Calendar className="h-5 w-5 text-[#D24848] mr-2 mt-0.5" />
                 <div>
                   <p className="text-sm text-gray-500">Fecha</p>
-                  <p className="font-medium">{formatDate(ticketDetails.date)}</p>
+                  <p className="font-medium">{formatDate(ticket.timestamp)}</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <Ticket className="h-5 w-5 text-[#D24848] mr-2 mt-0.5" />
                 <div>
-                  <p className="text-sm text-gray-500">Empresa</p>
-                  <p className="font-medium">{ticketDetails.company}</p>
+                  <p className="text-sm text-gray-500">Asiento</p>
+                  <p className="font-medium">{ticket.seat}</p>
                 </div>
               </div>
             </div>
@@ -118,34 +112,45 @@ export default function Confirmation() {
 
           <div className="flex flex-col space-y-3">
             <button
-              onClick={handleAddToWallet}
-              className="flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#D24848] hover:bg-[#B83A3A] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D24848] transition-colors duration-200"
+              onClick={() => alert('Añadido a tu wallet')}
+              className="flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#D24848] hover:bg-[#B83A3A]"
             >
               <Download className="h-5 w-5 mr-2" />
               Añadir a Wallet
             </button>
 
             <button
-              onClick={handleShare}
-              className="flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#D24848] transition-colors duration-200"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'Mi boleto BoletoExpress',
+                    text: `Boleto de ${ticket.origin} a ${ticket.destination}`,
+                    url: window.location.href,
+                  });
+                } else alert('Compartir no disponible');
+              }}
+              className="flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
             >
               <Share2 className="h-5 w-5 mr-2" />
               Compartir Boleto
             </button>
 
-            <Link to="/" className="text-center text-sm text-[#D24848] hover:text-[#B83A3A] font-medium">
+            <button
+              onClick={() => navigate('/')}
+              className="text-center text-sm text-[#D24848] hover:text-[#B83A3A] font-medium"
+            >
               Volver al inicio
-            </Link>
+            </button>
           </div>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">Boleto guardado en tu wallet. ¡Buen viaje!</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Muestra este código QR al personal de la empresa de transporte para abordar.
-            </p>
+            <p className="text-sm text-gray-500">{used ? 'Ticket marcado como usado' : 'Boleto listo para usar. ¡Buen viaje!'}</p>
+            {!used && (
+              <p className="mt-1 text-xs text-gray-400">Muestra este QR para verificar.</p>
+            )}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }

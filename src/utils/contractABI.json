@@ -88,11 +88,6 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "to",
-				"type": "address"
-			},
-			{
 				"internalType": "string",
 				"name": "origin",
 				"type": "string"
@@ -105,11 +100,6 @@
 			{
 				"internalType": "uint256",
 				"name": "seat",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "departureTime",
 				"type": "uint256"
 			}
 		],
@@ -250,7 +240,7 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "to",
+				"name": "passenger",
 				"type": "address"
 			},
 			{
@@ -274,7 +264,7 @@
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "departureTime",
+				"name": "timestamp",
 				"type": "uint256"
 			}
 		],
@@ -427,6 +417,50 @@
 	{
 		"inputs": [
 			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "getTicket",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "passenger",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "origin",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "destination",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "seat",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "used",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "owner",
 				"type": "address"
@@ -438,6 +472,25 @@
 			}
 		],
 		"name": "isApprovedForAll",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "isUsed",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -562,7 +615,7 @@
 			},
 			{
 				"internalType": "uint256",
-				"name": "departureTime",
+				"name": "timestamp",
 				"type": "uint256"
 			},
 			{
