@@ -1,80 +1,65 @@
-// Stub functions for Ethereum interactions
+// src/utils/ethereum.js
+import { ethers } from 'ethers';
+import CONTRACT_ABI from './contractABI.json';
+import { CONTRACT_ADDRESS } from './contractAddress';
+
+let provider;
+let signer;
+let contract;
 
 /**
- * Connect to MetaMask wallet
- * @returns {Promise<{account: string, balance: string}>}
+ * Conecta MetaMask, pide permisos y devuelve account + balance.
  */
 export async function connectWallet() {
-  console.log("Connecting to wallet...")
-
-  // Simulate delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  // Mock successful connection
-  const mockAccount = "0x" + Math.random().toString(16).substring(2, 42)
-  const mockBalance = (Math.random() * 10).toFixed(4)
-
-  console.log(`Connected to wallet: ${mockAccount}`)
-  console.log(`Balance: ${mockBalance} ETH`)
-
-  return {
-    account: mockAccount,
-    balance: mockBalance,
+  if (!window.ethereum) {
+    throw new Error('MetaMask no está instalado');
   }
+  // Solicita acceso
+  await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+  provider = new ethers.providers.Web3Provider(window.ethereum);
+  signer   = provider.getSigner();
+  const account = await signer.getAddress();
+  const balanceBN = await provider.getBalance(account);
+  const balance   = ethers.utils.formatEther(balanceBN);
+
+  // Una vez conectados, inicializa el contrato
+  contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+  return { account, balance, provider, signer, contract };
 }
 
 /**
- * Mint a new ticket as NFT
- * @param {string} from Origin
- * @param {string} to Destination
- * @param {number} seat Seat number
- * @returns {Promise<string>} Token ID
+ * Devuelve la instancia del contrato (ya inicializada tras connectWallet).
  */
-export async function mintTicket(from, to, seat) {
-  console.log(`Minting ticket: ${from} to ${to}, seat ${seat}`)
-
-  // Simulate delay and transaction processing
-  await new Promise((resolve) => setTimeout(resolve, 2000))
-
-  // Generate a random token ID
-  const tokenId = Math.floor(Math.random() * 1000000).toString()
-
-  console.log(`Ticket minted successfully. Token ID: ${tokenId}`)
-
-  return tokenId
+export function getContract() {
+  if (!contract) {
+    throw new Error('Primero debes conectar la wallet con connectWallet()');
+  }
+  return contract;
 }
 
 /**
- * Verify if a ticket is valid
- * @param {string} tokenId Token ID
- * @returns {Promise<boolean>} Is valid
+ * Simula el mint de un ticket (asume que connectWallet ya inicializó `contract`).
+ */
+export async function mintTicket(origin, destination, seat, departureTime, priceInEth) {
+  const c = getContract();
+  const tx = await c.mintTicket(
+    await signer.getAddress(),
+    origin,
+    destination,
+    seat,
+    departureTime,
+    { value: ethers.utils.parseEther(priceInEth.toString()) }
+  );
+  return tx.wait();
+}
+
+/**
+ * Simula la verificación de un ticket (solo owner puede llamar).
  */
 export async function verifyTicket(tokenId) {
-  console.log(`Verifying ticket with token ID: ${tokenId}`)
-
-  // Simulate delay
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-
-  // 80% chance of being valid
-  const isValid = Math.random() < 0.8
-
-  console.log(`Ticket verification result: ${isValid ? "Valid" : "Invalid"}`)
-
-  return isValid
-}
-
-/**
- * Mark a ticket as used
- * @param {string} tokenId Token ID
- * @returns {Promise<boolean>} Success
- */
-export async function markTicketAsUsed(tokenId) {
-  console.log(`Marking ticket as used: ${tokenId}`)
-
-  // Simulate delay
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  console.log(`Ticket ${tokenId} marked as used`)
-
-  return true
+  const c = getContract();
+  const tx = await c.verifyTicket(tokenId);
+  return tx.wait();
 }
