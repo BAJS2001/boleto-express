@@ -1,5 +1,5 @@
-// Home.jsx - Parte 1: Imports, hooks y lógica de estado
 "use client";
+// Home.jsx - Parte 1: Imports, hooks y lógica de estado
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";

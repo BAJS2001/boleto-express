@@ -23,12 +23,17 @@ export default function Verification() {
 
   // Simulación de cámara (puedes reemplazarla con un lector real)
   useEffect(() => {
-    if (!cameraActive) return;
-    const timer = setTimeout(() => {
-      handleManualVerify("123456789"); // token simulado
-      setCameraActive(false);
-    }, 3000);
-    return () => clearTimeout(timer);
+    // esta línea evita que el efecto corra en SSR
+    if (typeof window === "undefined") return;
+
+    if (cameraActive && videoRef.current) {
+      // aquí ya puedes usar document, navigator.mediaDevices, etc.
+      const timer = setTimeout(() => {
+        handleManualVerify("123456789");
+        setCameraActive(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
   }, [cameraActive]);
   const startCamera = () => {
     setVerificationResult(null);

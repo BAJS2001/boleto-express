@@ -1,3 +1,4 @@
+// src/pages/Confirmation.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,26 +10,25 @@ import { useEthereum } from "../context/EthereumContext";
 export default function Confirmation() {
   const { tokenId } = useParams();
   const navigate = useNavigate();
-  const { fetchTicket, checkUsed } = useEthereum();
+  const { fetchTicket } = useEthereum(); // ya no usamos checkUsed
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [used, setUsed] = useState(false);
 
   useEffect(() => {
-    // Cargar detalles on-chain del ticket
     async function loadTicket() {
       setLoading(true);
       try {
         const data = await fetchTicket(tokenId);
         setTicket({
-          origin: data.origin,
+          origin:      data.origin,
           destination: data.destination,
-          seat: data.seat,
-          timestamp: data.timestamp,
-          passenger: data.passenger,
+          seat:        data.seat,
+          timestamp:   data.timestamp,
+          passenger:   data.passenger,
         });
-        const isUsed = await checkUsed(tokenId);
-        setUsed(isUsed);
+        // Usamos directamente el campo `used` que viene en `data`
+        setUsed(data.used);
       } catch (err) {
         console.error("Error cargando ticket:", err);
       } finally {
@@ -36,9 +36,8 @@ export default function Confirmation() {
       }
     }
     loadTicket();
-  }, [tokenId, fetchTicket, checkUsed]);
+  }, [tokenId, fetchTicket]);
 
-  // Format date for display
   const formatDate = (ts) => {
     const date = new Date(ts * 1000);
     return date.toLocaleDateString("es-ES", {
@@ -65,8 +64,7 @@ export default function Confirmation() {
             <Check className="h-8 w-8 text-green-500" />
             <div className="ml-3">
               <h1 className="text-lg font-medium text-green-800">¡Compra exitosa!</h1>
-              <p className="text-sm text-green-600">
-                Tu boleto ha sido emitido como NFT</p>
+              <p className="text-sm text-green-600">Tu boleto ha sido emitido como NFT</p>
             </div>
           </div>
         </div>
@@ -144,9 +142,15 @@ export default function Confirmation() {
           </div>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500">{used ? 'Ticket marcado como usado' : 'Boleto listo para usar. ¡Buen viaje!'}</p>
+            <p className="text-sm text-gray-500">
+              {used
+                ? 'Ticket marcado como usado'
+                : 'Boleto listo para usar. ¡Buen viaje!'}
+            </p>
             {!used && (
-              <p className="mt-1 text-xs text-gray-400">Muestra este QR para verificar.</p>
+              <p className="mt-1 text-xs text-gray-400">
+                Muestra este QR para verificar.
+              </p>
             )}
           </div>
         </div>

@@ -1,3 +1,4 @@
+// src/components/Sidebar.jsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,35 +7,46 @@ import { MapPin, Clock, ChevronRight } from "lucide-react";
 import { useEthereum } from "../context/EthereumContext";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
+  // 1) Hooks must always be called unconditionally, at the top:
   const { account, contract, frequentRoutes, isConnected, loading } = useEthereum();
   const [recentTickets, setRecentTickets] = useState([]);
 
-  // No mostramos si no están conectados
-  if (!isConnected) return null;
-
+  // 2) useEffect runs on every render, but we guard inside:
   useEffect(() => {
+    if (!isConnected || !contract || !account) {
+      setRecentTickets([]);
+      return;
+    }
+
     async function loadTickets() {
-      if (!contract || !account) return setRecentTickets([]);
       try {
-        const balance = await contract.balanceOf(account);
+        const balanceBN = await contract.balanceOf(account);
+        const bal = balanceBN.toNumber();
         const arr = [];
-        for (let i = 0; i < balance.toNumber(); i++) {
-          const tokenId = await contract.tokenOfOwnerByIndex(account, i);
+
+        for (let i = 0; i < bal; i++) {
+          const tokenIdBN = await contract.tokenOfOwnerByIndex(account, i);
+          const tokenId = tokenIdBN.toString();
           const t = await contract.getTicket(tokenId);
           arr.push({
-            id: tokenId.toString(),
+            id: tokenId,
             from: t.origin,
             to: t.destination,
             date: new Date(t.timestamp * 1000).toLocaleDateString(),
           });
         }
+
         setRecentTickets(arr);
       } catch (e) {
         console.error("Error cargando tickets:", e);
       }
     }
+
     loadTickets();
-  }, [account, contract]);
+  }, [isConnected, account, contract]);
+
+  // 3) After all hooks, we can conditionally render:
+  if (!isConnected) return null;
 
   return (
     <div
@@ -61,7 +73,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                   onClick={() => setIsOpen(false)}
                   className="flex items-center text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md p-2"
                 >
-                  <span>{route.from} - {route.to}</span>
+                  <span>{`${route.from} - ${route.to}`}</span>
                   <ChevronRight className="h-4 w-4 ml-auto" />
                 </Link>
               </li>
@@ -81,14 +93,14 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             ) : recentTickets.length === 0 ? (
               <p className="text-xs text-gray-500">No hay boletos aún.</p>
             ) : (
-              recentTickets.map((ticket) => (
+              recentTickets.map(ticket => (
                 <div key={ticket.id} className="bg-gray-50 rounded-md p-3 shadow-sm">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-medium text-gray-500">#{ticket.id}</span>
                     <span className="text-xs text-gray-500">{ticket.date}</span>
                   </div>
                   <div className="text-sm font-medium">
-                    {ticket.from} → {ticket.to}
+                    {`${ticket.from} → ${ticket.to}`}
                   </div>
                 </div>
               ))
