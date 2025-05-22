@@ -24,7 +24,7 @@ export async function connectWallet() {
   const balanceBN = await provider.getBalance(account);
   const balance   = ethers.formatEther(balanceBN);
 
-  return { account, balance };
+  return { account, balance, contract };
 }
 
 function getContract() {

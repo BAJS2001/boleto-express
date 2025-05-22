@@ -16,6 +16,7 @@ export default function History() {
   const {
     account,
     contract,
+    isConnected,      // <-- añadir esto
     loading: ethLoading,
     fetchTicket,
   } = useEthereum();
@@ -27,25 +28,28 @@ export default function History() {
 
   useEffect(() => {
     async function loadHistory() {
-      if (!contract || !account) {
+      // No arrancamos hasta tener todo listo
+      if (!isConnected || !contract || !account) {
         setTickets([]);
         setLoading(false);
         return;
       }
+
       setLoading(true);
       try {
         const balanceBN = await contract.balanceOf(account);
-        const balance = balanceBN.toNumber();
+        const bal       = Number(balanceBN);        // convierte bigint a Number
+
         const arr = [];
-        for (let i = 0; i < balance; i++) {
+        for (let i = 0; i < bal; i++) {              // 👈 usa `bal`, no `balance`
           const tokenIdBN = await contract.tokenOfOwnerByIndex(account, i);
-          const tokenId = tokenIdBN.toString();
-          const data = await fetchTicket(tokenId);
+          const tokenId   = tokenIdBN.toString();
+          const data      = await fetchTicket(tokenId);
           arr.push({
             tokenId,
-            origin: data.origin,
+            origin:      data.origin,
             destination: data.destination,
-            timestamp: data.timestamp,
+            timestamp:   data.timestamp,
           });
         }
         // orden cronológico descendente
@@ -58,21 +62,18 @@ export default function History() {
       }
     }
     loadHistory();
-  }, [contract, account, fetchTicket]);
-  // cálculo de paginación
-  const totalPages = Math.ceil(tickets.length / ticketsPerPage);
-  const startIdx = (currentPage - 1) * ticketsPerPage;
-  const currentTickets = tickets.slice(
-    startIdx,
-    startIdx + ticketsPerPage
-  );
+  }, [account, contract, isConnected, fetchTicket]);
 
-  // formatea timestamp
+  // Paginación
+  const totalPages     = Math.ceil(tickets.length / ticketsPerPage);
+  const startIdx       = (currentPage - 1) * ticketsPerPage;
+  const currentTickets = tickets.slice(startIdx, startIdx + ticketsPerPage);
+
   const formatDate = (ts) =>
     new Date(ts * 1000).toLocaleDateString("es-ES", {
-      year: "numeric",
+      year:  "numeric",
       month: "long",
-      day: "numeric",
+      day:   "numeric",
     });
 
   return (
@@ -80,9 +81,7 @@ export default function History() {
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-6 py-6">
           <h1 className="text-2xl font-bold text-white">Historial de Viajes</h1>
-          <p className="text-gray-300">
-            Consulta todos tus boletos anteriores
-          </p>
+          <p className="text-gray-300">Consulta todos tus boletos anteriores</p>
         </div>
 
         <div className="p-6">
@@ -128,7 +127,7 @@ export default function History() {
                         <div className="flex items-center text-xs text-gray-500">
                           <Clock className="h-3 w-3 text-gray-400 mr-1" />
                           {new Date(t.timestamp * 1000).toLocaleTimeString("es-EC", {
-                            hour: "2-digit",
+                            hour:   "2-digit",
                             minute: "2-digit",
                           })}
                         </div>
@@ -151,6 +150,7 @@ export default function History() {
               </table>
             </div>
           )}
+
           {!loading && !ethLoading && tickets.length > ticketsPerPage && (
             <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 mt-4">
               <button

@@ -7,12 +7,12 @@ import { MapPin, Clock, ChevronRight } from "lucide-react";
 import { useEthereum } from "../context/EthereumContext";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
-  // 1) Hooks must always be called unconditionally, at the top:
+  // Hooks en el tope
   const { account, contract, frequentRoutes, isConnected, loading } = useEthereum();
   const [recentTickets, setRecentTickets] = useState([]);
 
-  // 2) useEffect runs on every render, but we guard inside:
   useEffect(() => {
+    // Si no estamos listos, limpiamos y salimos
     if (!isConnected || !contract || !account) {
       setRecentTickets([]);
       return;
@@ -20,19 +20,21 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
     async function loadTickets() {
       try {
+        // balanceOf devuelve un bigint en ethers v6
         const balanceBN = await contract.balanceOf(account);
-        const bal = balanceBN.toNumber();
-        const arr = [];
+        const bal = Number(balanceBN); 
 
+        const arr = [];
         for (let i = 0; i < bal; i++) {
           const tokenIdBN = await contract.tokenOfOwnerByIndex(account, i);
           const tokenId = tokenIdBN.toString();
           const t = await contract.getTicket(tokenId);
+
           arr.push({
             id: tokenId,
             from: t.origin,
             to: t.destination,
-            date: new Date(t.timestamp * 1000).toLocaleDateString(),
+            date: new Date(Number(t.timestamp) * 1000).toLocaleDateString(),
           });
         }
 
@@ -45,7 +47,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     loadTickets();
   }, [isConnected, account, contract]);
 
-  // 3) After all hooks, we can conditionally render:
+  // Tras los hooks, render condicional
   if (!isConnected) return null;
 
   return (
